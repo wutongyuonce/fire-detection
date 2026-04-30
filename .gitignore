@@ -12,3 +12,4 @@ wheels/
 # Storage files
 backend/storage/snapshots/fire/*
 backend/storage/uploads/videos/*
+!.gitkeep
