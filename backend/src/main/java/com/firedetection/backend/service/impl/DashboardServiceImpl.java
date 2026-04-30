@@ -2,8 +2,7 @@ package com.firedetection.backend.service.impl;
 
 import com.firedetection.backend.dto.dashboard.DashboardOverviewResponse;
 import com.firedetection.backend.entity.FireEvent;
-import com.firedetection.backend.enums.TaskStatus;
-import com.firedetection.backend.repository.DetectTaskRepository;
+import com.firedetection.backend.enums.SourceType;
 import com.firedetection.backend.repository.FireEventRepository;
 import com.firedetection.backend.service.DashboardService;
 import org.springframework.stereotype.Service;
@@ -19,24 +18,21 @@ public class DashboardServiceImpl implements DashboardService {
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    private final DetectTaskRepository detectTaskRepository;
     private final FireEventRepository fireEventRepository;
 
-    public DashboardServiceImpl(DetectTaskRepository detectTaskRepository, FireEventRepository fireEventRepository) {
-        this.detectTaskRepository = detectTaskRepository;
+    public DashboardServiceImpl(FireEventRepository fireEventRepository) {
         this.fireEventRepository = fireEventRepository;
     }
 
     @Override
     public DashboardOverviewResponse getOverview() {
-        int runningTaskCount = (int) detectTaskRepository.countByStatus(TaskStatus.RUNNING.name());
         LocalDate today = LocalDate.now();
-        int todayFireCount = (int) fireEventRepository.countByEventTimeBetween(today.atStartOfDay(), today.plusDays(1).atStartOfDay().minusSeconds(1));
-        Map<String, Object> latestEvent = fireEventRepository.findTopByOrderByEventTimeDesc()
+        int todayFireCount = (int) fireEventRepository.countBySourceTypeAndEventTimeBetween(
+                SourceType.CAMERA.name(), today.atStartOfDay(), today.plusDays(1).atStartOfDay().minusSeconds(1));
+        Map<String, Object> latestEvent = fireEventRepository.findTopBySourceTypeOrderByEventTimeDesc(SourceType.CAMERA.name())
                 .map(this::toLatestEventMap)
                 .orElse(null);
-        String systemStatus = runningTaskCount > 0 ? TaskStatus.RUNNING.name() : "IDLE";
-        return new DashboardOverviewResponse(runningTaskCount, todayFireCount, systemStatus, latestEvent);
+        return new DashboardOverviewResponse(todayFireCount, latestEvent);
     }
 
     private Map<String, Object> toLatestEventMap(FireEvent event) {

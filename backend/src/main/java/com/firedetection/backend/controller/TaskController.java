@@ -7,6 +7,7 @@ import com.firedetection.backend.dto.task.TaskStatusResponse;
 import com.firedetection.backend.service.TaskService;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -43,8 +44,9 @@ public class TaskController {
     @PostMapping(value = "/video/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<Map<String, Object>> uploadVideo(@RequestPart("file") MultipartFile file,
                                                         @RequestParam(required = false) String sourceName,
-                                                        @RequestParam(required = false) BigDecimal confThreshold) {
-        return ApiResponse.success(taskService.uploadVideo(file, sourceName, confThreshold));
+                                                        @RequestParam(required = false) BigDecimal confThreshold,
+                                                        @RequestParam(required = false) String sourceType) {
+        return ApiResponse.success(taskService.uploadVideo(file, sourceName, confThreshold, sourceType));
     }
 
     @GetMapping("/{taskId}")
@@ -67,5 +69,20 @@ public class TaskController {
             @RequestParam(required = false) String startTime,
             @RequestParam(required = false) String endTime) {
         return ApiResponse.success(taskService.listTasks(pageNum, pageSize, taskType, status, sourceType, startTime, endTime));
+    }
+
+    @DeleteMapping("/video/clear")
+    public ApiResponse<Map<String, Object>> clearUploadedVideos() {
+        return ApiResponse.success(taskService.clearUploadedVideos());
+    }
+
+    @PostMapping("/camera/analyze-frame")
+    public ApiResponse<Map<String, Object>> analyzeCameraFrame(@RequestBody Map<String, Object> body) {
+        String imageBase64 = (String) body.get("imageBase64");
+        String sourceName = (String) body.get("sourceName");
+        Integer frameIndex = body.get("frameIndex") != null ? ((Number) body.get("frameIndex")).intValue() : 0;
+        BigDecimal confThreshold = body.get("confThreshold") != null
+                ? new BigDecimal(body.get("confThreshold").toString()) : null;
+        return ApiResponse.success(taskService.analyzeCameraFrame(imageBase64, sourceName, frameIndex, confThreshold));
     }
 }

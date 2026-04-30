@@ -20,54 +20,73 @@ body {
   min-height: 100vh;
 }
 
-.layout-shell {
-  display: grid;
-  grid-template-columns: 240px 1fr;
+.app-layout {
+  display: flex;
   min-height: 100vh;
 }
 
-.sidebar {
-  padding: 24px 16px;
+.app-aside {
+  width: 240px;
+  flex-shrink: 0;
   background: linear-gradient(180deg, #111827 0%, #1f2937 100%);
   color: #fff;
+  padding: 24px 16px;
 }
 
-.brand {
-  margin-bottom: 20px;
+.app-aside-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 16px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.08);
+  margin-bottom: 24px;
 }
 
-.brand-title {
-  font-size: 18px;
+.app-brand-icon {
+  font-size: 24px;
+}
+
+.app-brand-text {
+  font-size: 16px;
   font-weight: 700;
 }
 
-.brand-subtitle {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #d1d5db;
+.app-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.side-menu {
-  border-right: none;
-  background: transparent;
-}
-
-.side-menu .el-menu-item {
-  margin-bottom: 8px;
+.app-menu-item {
+  padding: 10px 16px;
   border-radius: 12px;
   color: #e5e7eb;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
 }
 
-.side-menu .el-menu-item.is-active {
+.app-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.app-menu-item.active {
   color: #fff;
   background: #ef4444;
 }
 
-.page-content {
+.app-main {
+  flex: 1;
   padding: 24px;
+  overflow-y: auto;
+  background: #f3f6fb;
 }
 
 .page-header {
@@ -90,7 +109,7 @@ body {
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 20px;
 }
 

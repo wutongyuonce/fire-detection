@@ -45,6 +45,9 @@ public class FireEvent {
     @Column(name = "task_frame_no")
     private Integer taskFrameNo;
 
+    @Column(name = "video_timecode", length = 32)
+    private String videoTimecode;
+
     @Column(name = "remark", length = 255)
     private String remark;
 
@@ -132,6 +135,14 @@ public class FireEvent {
 
     public void setTaskFrameNo(Integer taskFrameNo) {
         this.taskFrameNo = taskFrameNo;
+    }
+
+    public String getVideoTimecode() {
+        return videoTimecode;
+    }
+
+    public void setVideoTimecode(String videoTimecode) {
+        this.videoTimecode = videoTimecode;
     }
 
     public String getRemark() {

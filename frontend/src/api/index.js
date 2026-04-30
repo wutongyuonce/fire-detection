@@ -7,15 +7,8 @@ export function getOverview() {
 export function uploadVideo(formData) {
   return http.post('/api/tasks/video/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 300000,
   })
-}
-
-export function getTasks(params = {}) {
-  return http.get('/api/tasks', { params })
-}
-
-export function getTaskDetail(taskId) {
-  return http.get(`/api/tasks/${taskId}`)
 }
 
 export function getEvents(params = {}) {
@@ -30,14 +23,10 @@ export function deleteEvent(id) {
   return http.delete(`/api/fire-events/${id}`)
 }
 
-export function getImages(params = {}) {
-  return http.get('/api/fire-images', { params })
+export function clearUploadedVideos() {
+  return http.delete('/api/tasks/video/clear')
 }
 
-export function getImageDetail(id) {
-  return http.get(`/api/fire-images/${id}`)
-}
-
-export function deleteImage(id) {
-  return http.delete(`/api/fire-images/${id}`)
+export function analyzeCameraFrame(data) {
+  return http.post('/api/tasks/camera/analyze-frame', data, { timeout: 30000 })
 }

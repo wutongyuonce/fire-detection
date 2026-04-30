@@ -1,5 +1,7 @@
 package com.firedetection.backend.service.impl;
 
+import com.firedetection.backend.dto.inference.FrameAnalyzeRequest;
+import com.firedetection.backend.dto.inference.FrameAnalyzeResponse;
 import com.firedetection.backend.dto.inference.VideoAnalyzeRequest;
 import com.firedetection.backend.dto.inference.VideoAnalyzeResponse;
 import com.firedetection.backend.entity.DetectTask;
@@ -57,6 +59,36 @@ public class InferenceGatewayServiceImpl implements InferenceGatewayService {
                     baseUrl + "/infer/video/analyze",
                     request,
                     VideoAnalyzeResponse.class
+            );
+            if (response == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Inference service returned empty response");
+            }
+            return response;
+        } catch (RestClientException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Failed to call inference service", ex);
+        }
+    }
+
+    @Override
+    public FrameAnalyzeResponse analyzeFrame(String taskNo, String imageBase64, String sourceName,
+                                             Integer frameIndex, BigDecimal confThreshold) {
+        FrameAnalyzeRequest request = new FrameAnalyzeRequest(
+                taskNo,
+                imageBase64,
+                resolveProjectPath(weightsPath),
+                resolveStoragePath(snapshotDir),
+                snapshotDir.replace("\\", "/"),
+                sourceName,
+                frameIndex,
+                device,
+                confThreshold != null ? confThreshold : defaultConfThreshold
+        );
+
+        try {
+            FrameAnalyzeResponse response = restTemplate.postForObject(
+                    baseUrl + "/infer/frame/analyze",
+                    request,
+                    FrameAnalyzeResponse.class
             );
             if (response == null) {
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Inference service returned empty response");

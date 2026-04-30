@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import base64
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
 import cv2
+import numpy as np
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from ultralytics import YOLO
@@ -115,8 +117,8 @@ def analyze_video(request: VideoAnalyzeRequest) -> VideoAnalyzeResponse:
     if fps is None or fps <= 1e-3:
         fps = 25.0
 
-    frame_interval = max(1, int(round(fps / 4)))
-    event_gap_frames = max(frame_interval, int(round(fps * 2)))
+    frame_interval = max(1, int(round(fps / 3)))
+    event_gap_frames = max(frame_interval, int(round(fps * 3)))
 
     frame_count = 0
     last_event_frame = -event_gap_frames
@@ -153,9 +155,11 @@ def analyze_video(request: VideoAnalyzeRequest) -> VideoAnalyzeResponse:
 
             relative_snapshot_path = f"{snapshot_relative_dir}/{file_name}"
             duration_seconds = round(frame_count / fps, 2)
+            video_seconds = round(frame_count / fps)
+            video_timecode = f"{video_seconds // 3600:02d}:{(video_seconds % 3600) // 60:02d}:{video_seconds % 60:02d}"
             events.append(
                 EventItem(
-                    eventTime=datetime.now().isoformat(timespec="seconds"),
+                    eventTime=video_timecode,
                     confidence=round(top_conf, 4),
                     durationSeconds=duration_seconds,
                     snapshotPath=relative_snapshot_path,
@@ -185,6 +189,132 @@ def analyze_video(request: VideoAnalyzeRequest) -> VideoAnalyzeResponse:
         errorMessage=None,
         events=events,
     )
+
+
+class BoundingBox(BaseModel):
+    x1: float
+    y1: float
+    x2: float
+    y2: float
+    confidence: float
+    class_id: int = 0
+    class_name: str = "fire"
+
+
+class FrameAnalyzeRequest(BaseModel):
+    taskNo: str
+    imageBase64: str
+    weightsPath: str | None = None
+    snapshotDir: str | None = None
+    snapshotRelativeDir: str | None = None
+    sourceName: str | None = None
+    frameIndex: int = 0
+    device: str = "cpu"
+    confThreshold: float = Field(default=0.30, ge=0.0, le=1.0)
+
+
+class FrameAnalyzeResponse(BaseModel):
+    taskNo: str
+    status: Literal["FINISHED", "FAILED"]
+    hasFire: bool
+    topConfidence: float
+    boxCount: int
+    boxes: list[BoundingBox] = []
+    snapshotPath: str | None = None
+    errorMessage: str | None = None
+
+
+@app.post("/infer/frame/analyze", response_model=FrameAnalyzeResponse)
+def analyze_frame(request: FrameAnalyzeRequest) -> FrameAnalyzeResponse:
+    weights_path = Path(request.weightsPath).expanduser().resolve() if request.weightsPath else DEFAULT_WEIGHTS_PATH
+    snapshot_dir = ensure_dir(Path(request.snapshotDir).expanduser().resolve()) if request.snapshotDir else ensure_dir(DEFAULT_SNAPSHOT_DIR)
+    snapshot_relative_dir = (request.snapshotRelativeDir or DEFAULT_SNAPSHOT_REL_DIR).replace("\\", "/").strip("/")
+
+    if not weights_path.exists():
+        return FrameAnalyzeResponse(
+            taskNo=request.taskNo,
+            status="FAILED",
+            hasFire=False,
+            topConfidence=0.0,
+            boxCount=0,
+            errorMessage=f"Weights file not found: {weights_path}",
+        )
+
+    try:
+        img_bytes = base64.b64decode(request.imageBase64)
+        np_arr = np.frombuffer(img_bytes, dtype=np.uint8)
+        frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        if frame is None:
+            return FrameAnalyzeResponse(
+                taskNo=request.taskNo,
+                status="FAILED",
+                hasFire=False,
+                topConfidence=0.0,
+                boxCount=0,
+                errorMessage="Failed to decode base64 image",
+            )
+    except Exception as exc:
+        return FrameAnalyzeResponse(
+            taskNo=request.taskNo,
+            status="FAILED",
+            hasFire=False,
+            topConfidence=0.0,
+            boxCount=0,
+            errorMessage=f"Base64 decode error: {exc}",
+        )
+
+    model = get_model(str(weights_path))
+
+    try:
+        results = model.predict(frame, imgsz=640, conf=request.confThreshold, device=request.device, verbose=False)
+        result = results[0]
+
+        boxes: list[BoundingBox] = []
+        top_conf = 0.0
+        for box in result.boxes:
+            conf = float(box.conf.item())
+            cls_id = int(box.cls.item())
+            cls_name = result.names.get(cls_id, "fire") if result.names else "fire"
+            x1, y1, x2, y2 = box.xyxy[0].tolist()
+            boxes.append(BoundingBox(
+                x1=round(x1, 2), y1=round(y1, 2),
+                x2=round(x2, 2), y2=round(y2, 2),
+                confidence=round(conf, 4),
+                class_id=cls_id,
+                class_name=cls_name,
+            ))
+            top_conf = max(top_conf, conf)
+
+        has_fire = len(boxes) > 0 and top_conf >= request.confThreshold
+        snapshot_path = None
+
+        if has_fire:
+            annotated = result.plot()
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            file_name = f"{request.taskNo}_{request.frameIndex}_{timestamp}.jpg"
+            snapshot_file = snapshot_dir / file_name
+            cv2.imwrite(str(snapshot_file), annotated)
+            snapshot_path = f"{snapshot_relative_dir}/{file_name}"
+
+        return FrameAnalyzeResponse(
+            taskNo=request.taskNo,
+            status="FINISHED",
+            hasFire=has_fire,
+            topConfidence=round(top_conf, 4),
+            boxCount=len(boxes),
+            boxes=boxes,
+            snapshotPath=snapshot_path,
+        )
+
+    except Exception as exc:
+        return FrameAnalyzeResponse(
+            taskNo=request.taskNo,
+            status="FAILED",
+            hasFire=False,
+            topConfidence=0.0,
+            boxCount=0,
+            errorMessage=str(exc),
+        )
 
 
 if __name__ == "__main__":

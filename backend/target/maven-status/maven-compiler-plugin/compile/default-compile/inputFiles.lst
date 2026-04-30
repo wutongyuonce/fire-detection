@@ -7,6 +7,8 @@
 /Users/a/Desktop/fire-detection/backend/src/main/java/com/firedetection/backend/controller/FireImageController.java
 /Users/a/Desktop/fire-detection/backend/src/main/java/com/firedetection/backend/controller/TaskController.java
 /Users/a/Desktop/fire-detection/backend/src/main/java/com/firedetection/backend/dto/dashboard/DashboardOverviewResponse.java
+/Users/a/Desktop/fire-detection/backend/src/main/java/com/firedetection/backend/dto/inference/FrameAnalyzeRequest.java
+/Users/a/Desktop/fire-detection/backend/src/main/java/com/firedetection/backend/dto/inference/FrameAnalyzeResponse.java
 /Users/a/Desktop/fire-detection/backend/src/main/java/com/firedetection/backend/dto/inference/VideoAnalyzeRequest.java
 /Users/a/Desktop/fire-detection/backend/src/main/java/com/firedetection/backend/dto/inference/VideoAnalyzeResponse.java
 /Users/a/Desktop/fire-detection/backend/src/main/java/com/firedetection/backend/dto/task/CameraTaskCreateRequest.java

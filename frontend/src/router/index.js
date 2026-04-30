@@ -1,17 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DashboardView from '../views/DashboardView.vue'
-import UploadView from '../views/UploadView.vue'
-import TasksView from '../views/TasksView.vue'
-import EventsView from '../views/EventsView.vue'
-import ImagesView from '../views/ImagesView.vue'
+import VideoEventsView from '../views/VideoEventsView.vue'
+import CameraEventsView from '../views/CameraEventsView.vue'
 
 const routes = [
   { path: '/', redirect: '/dashboard' },
   { path: '/dashboard', component: DashboardView, meta: { title: '系统概览' } },
-  { path: '/upload', component: UploadView, meta: { title: '视频上传' } },
-  { path: '/tasks', component: TasksView, meta: { title: '任务列表' } },
-  { path: '/events', component: EventsView, meta: { title: '火情事件' } },
-  { path: '/images', component: ImagesView, meta: { title: '火情图片' } },
+  { path: '/video-events', component: VideoEventsView, meta: { title: '视频分析' } },
+  { path: '/camera-events', component: CameraEventsView, meta: { title: '实时监控' } },
 ]
 
 const router = createRouter({
@@ -19,8 +15,10 @@ const router = createRouter({
   routes,
 })
 
-router.afterEach((to) => {
-  document.title = `${to.meta.title || '火焰监测系统'} - 施工场地火焰监测系统`
+router.beforeEach((to, from, next) => {
+  const title = to.meta.title ? `${to.meta.title} - 施工场地火焰监测系统` : '施工场地火焰监测系统'
+  document.title = title
+  next()
 })
 
 export default router

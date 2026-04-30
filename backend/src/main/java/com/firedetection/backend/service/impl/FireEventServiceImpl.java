@@ -122,6 +122,7 @@ public class FireEventServiceImpl implements FireEventService {
         record.put("sourceType", event.getSourceType());
         record.put("sourceName", event.getSourceName());
         record.put("eventTime", format(event.getEventTime()));
+        record.put("videoTimecode", event.getVideoTimecode());
         record.put("confidence", event.getConfidence());
         record.put("snapshotUrl", toStaticUrl(event.getSnapshotPath()));
         return record;

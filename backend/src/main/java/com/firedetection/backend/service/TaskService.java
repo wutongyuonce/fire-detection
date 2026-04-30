@@ -14,7 +14,7 @@ public interface TaskService {
 
     Map<String, Object> stopTask(Long taskId);
 
-    Map<String, Object> uploadVideo(MultipartFile file, String sourceName, BigDecimal confThreshold);
+    Map<String, Object> uploadVideo(MultipartFile file, String sourceName, BigDecimal confThreshold, String sourceType);
 
     Map<String, Object> getTaskDetail(Long taskId);
 
@@ -22,4 +22,8 @@ public interface TaskService {
 
     PageResponse<Map<String, Object>> listTasks(int pageNum, int pageSize, String taskType, String status,
                                                 String sourceType, String startTime, String endTime);
+
+    Map<String, Object> clearUploadedVideos();
+
+    Map<String, Object> analyzeCameraFrame(String imageBase64, String sourceName, Integer frameIndex, BigDecimal confThreshold);
 }

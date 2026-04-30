@@ -13,5 +13,9 @@ public interface FireEventRepository extends JpaRepository<FireEvent, Long>, Jpa
 
     Optional<FireEvent> findTopByOrderByEventTimeDesc();
 
+    Optional<FireEvent> findTopBySourceTypeOrderByEventTimeDesc(String sourceType);
+
     long countByEventTimeBetween(LocalDateTime startTime, LocalDateTime endTime);
+
+    long countBySourceTypeAndEventTimeBetween(String sourceType, LocalDateTime startTime, LocalDateTime endTime);
 }

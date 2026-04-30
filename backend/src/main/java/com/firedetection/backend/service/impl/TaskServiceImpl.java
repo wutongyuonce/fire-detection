@@ -1,6 +1,7 @@
 package com.firedetection.backend.service.impl;
 
 import com.firedetection.backend.common.PageResponse;
+import com.firedetection.backend.dto.inference.FrameAnalyzeResponse;
 import com.firedetection.backend.dto.inference.VideoAnalyzeResponse;
 import com.firedetection.backend.dto.task.CameraTaskCreateRequest;
 import com.firedetection.backend.dto.task.TaskStatusResponse;
@@ -119,7 +120,7 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional
-    public Map<String, Object> uploadVideo(MultipartFile file, String sourceName, BigDecimal confThreshold) {
+    public Map<String, Object> uploadVideo(MultipartFile file, String sourceName, BigDecimal confThreshold, String sourceTypeParam) {
         if (file == null || file.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Uploaded video file is empty");
         }
@@ -141,7 +142,8 @@ public class TaskServiceImpl implements TaskService {
         DetectTask task = new DetectTask();
         task.setTaskNo(generateBizNo("TASK"));
         task.setTaskType(TaskType.VIDEO.name());
-        task.setSourceType(SourceType.UPLOAD_VIDEO.name());
+        SourceType resolvedSourceType = SourceType.CAMERA.name().equals(sourceTypeParam) ? SourceType.CAMERA : SourceType.UPLOAD_VIDEO;
+        task.setSourceType(resolvedSourceType.name());
         task.setSourceName(sourceName != null && !sourceName.isBlank() ? sourceName : originalName);
         task.setStatus(TaskStatus.RUNNING.name());
         task.setVideoPath(relativePath);
@@ -283,19 +285,31 @@ public class TaskServiceImpl implements TaskService {
             return;
         }
 
+        boolean isVideo = SourceType.UPLOAD_VIDEO.name().equals(task.getSourceType());
+
         for (VideoAnalyzeResponse.EventItem item : response.events()) {
             FireEvent event = new FireEvent();
-            event.setEventNo(generateBizNo("EVENT"));
             event.setTaskId(task.getId());
             event.setSourceType(task.getSourceType());
             event.setSourceName(task.getSourceName());
-            event.setEventTime(parseEventTimeOrNow(item.eventTime()));
             event.setConfidence(item.confidence() != null ? item.confidence() : BigDecimal.ZERO);
             event.setDurationSeconds(item.durationSeconds());
             event.setSnapshotPath(item.snapshotPath());
             event.setTaskFrameNo(item.taskFrameNo());
             event.setCreatedAt(now);
             event.setUpdatedAt(now);
+
+            if (isVideo) {
+                String timecode = normalizeTimecode(item.eventTime());
+                event.setVideoTimecode(timecode);
+                event.setEventTime(parseEventTimeOrNow(item.eventTime()));
+                String tc = timecode.replace(":", "");
+                event.setEventNo("VEVT" + tc + UUID.randomUUID().toString().substring(0, 4).toUpperCase());
+            } else {
+                event.setEventTime(parseEventTimeOrNow(item.eventTime()));
+                event.setEventNo(generateBizNo("CEVT"));
+            }
+
             FireEvent savedEvent = fireEventRepository.save(event);
 
             if (hasText(item.snapshotPath())) {
@@ -388,5 +402,97 @@ public class TaskServiceImpl implements TaskService {
                 return LocalDateTime.now();
             }
         }
+    }
+
+    private String normalizeTimecode(String value) {
+        if (!hasText(value)) {
+            return "00:00:00";
+        }
+        if (value.matches("\\d{2}:\\d{2}:\\d{2}")) {
+            return value;
+        }
+        if (value.matches("\\d{2}:\\d{2}")) {
+            return value + ":00";
+        }
+        return value;
+    }
+
+    public Map<String, Object> clearUploadedVideos() {
+        Path videoRoot = resolveStorageFile(videoDir);
+        int deletedCount = 0;
+        if (Files.exists(videoRoot) && Files.isDirectory(videoRoot)) {
+            try (var stream = Files.list(videoRoot)) {
+                for (Path file : stream.toList()) {
+                    if (Files.isRegularFile(file)) {
+                        Files.deleteIfExists(file);
+                        deletedCount++;
+                    }
+                }
+            } catch (IOException ignored) {
+            }
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("deletedCount", deletedCount);
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> analyzeCameraFrame(String imageBase64, String sourceName, Integer frameIndex, BigDecimal confThreshold) {
+        String taskNo = generateBizNo("CAM");
+        FrameAnalyzeResponse response = inferenceGatewayService.analyzeFrame(taskNo, imageBase64, sourceName, frameIndex, confThreshold);
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("taskNo", taskNo);
+        data.put("status", response.status());
+        data.put("hasFire", response.hasFire());
+        data.put("topConfidence", response.topConfidence());
+        data.put("boxCount", response.boxCount());
+        data.put("boxes", response.boxes() != null ? response.boxes().stream().map(box -> {
+            Map<String, Object> b = new LinkedHashMap<>();
+            b.put("x1", box.x1());
+            b.put("y1", box.y1());
+            b.put("x2", box.x2());
+            b.put("y2", box.y2());
+            b.put("confidence", box.confidence());
+            b.put("className", box.className());
+            return b;
+        }).toList() : List.of());
+        data.put("snapshotPath", response.snapshotPath() != null ? toStaticUrl(response.snapshotPath()) : null);
+        data.put("errorMessage", response.errorMessage());
+
+        if (Boolean.TRUE.equals(response.hasFire()) && response.snapshotPath() != null) {
+            LocalDateTime now = LocalDateTime.now();
+            DetectTask task = new DetectTask();
+            task.setTaskNo(taskNo);
+            task.setTaskType(TaskType.CAMERA.name());
+            task.setSourceType(SourceType.CAMERA.name());
+            task.setSourceName(sourceName != null && !sourceName.isBlank() ? sourceName : "摄像头监控");
+            task.setStatus(TaskStatus.FINISHED.name());
+            task.setFrameCount(frameIndex != null ? frameIndex : 0);
+            task.setFireCount(1);
+            task.setResultSummary("Camera frame fire detected");
+            task.setStartTime(now);
+            task.setEndTime(now);
+            task.setCreatedAt(now);
+            task.setUpdatedAt(now);
+            DetectTask savedTask = detectTaskRepository.save(task);
+
+            FireEvent event = new FireEvent();
+            event.setTaskId(savedTask.getId());
+            event.setSourceType(SourceType.CAMERA.name());
+            event.setSourceName(savedTask.getSourceName());
+            event.setConfidence(response.topConfidence());
+            event.setDurationSeconds(BigDecimal.ZERO);
+            event.setSnapshotPath(response.snapshotPath());
+            event.setTaskFrameNo(frameIndex);
+            event.setEventTime(now);
+            event.setCreatedAt(now);
+            event.setUpdatedAt(now);
+            event.setEventNo(generateBizNo("CEVT"));
+            fireEventRepository.save(event);
+        }
+
+        return data;
     }
 }

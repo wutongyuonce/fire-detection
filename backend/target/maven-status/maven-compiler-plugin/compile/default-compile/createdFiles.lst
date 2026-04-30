@@ -1,4 +1,5 @@
 com/firedetection/backend/dto/task/CameraTaskCreateRequest.class
+com/firedetection/backend/dto/inference/FrameAnalyzeResponse.class
 com/firedetection/backend/repository/DetectTaskRepository.class
 com/firedetection/backend/entity/DetectTask.class
 com/firedetection/backend/dto/inference/VideoAnalyzeRequest.class
@@ -11,6 +12,7 @@ com/firedetection/backend/repository/FireImageRepository.class
 com/firedetection/backend/service/InferenceGatewayService.class
 com/firedetection/backend/dto/inference/VideoAnalyzeResponse$EventItem.class
 com/firedetection/backend/entity/FireEvent.class
+com/firedetection/backend/dto/inference/FrameAnalyzeResponse$BoundingBox.class
 com/firedetection/backend/enums/SourceType.class
 com/firedetection/backend/FireDetectionBackendApplication.class
 com/firedetection/backend/controller/DashboardController.class
@@ -21,6 +23,7 @@ com/firedetection/backend/dto/task/TaskStatusResponse.class
 com/firedetection/backend/enums/TaskStatus.class
 com/firedetection/backend/service/TaskService.class
 com/firedetection/backend/repository/FireEventRepository.class
+com/firedetection/backend/dto/inference/FrameAnalyzeRequest.class
 com/firedetection/backend/controller/TaskController.class
 com/firedetection/backend/service/impl/TaskServiceImpl.class
 com/firedetection/backend/dto/inference/VideoAnalyzeResponse.class
