@@ -19,6 +19,7 @@ const frameIndex = ref(0)
 const recordedUrl = ref(null)
 
 let recordedChunks = []
+let recordedMimeType = 'video/webm'
 let eventCallbacks = []
 
 function onFireDetected(cb) {
@@ -78,6 +79,7 @@ function startRecording() {
       options.mimeType = 'video/webm'
     }
   }
+  recordedMimeType = options.mimeType
   mediaRecorder = new MediaRecorder(cameraStream, options)
   mediaRecorder.ondataavailable = (event) => {
     if (event.data.size > 0) {
@@ -86,9 +88,10 @@ function startRecording() {
   }
   mediaRecorder.onstop = () => {
     if (recordedChunks.length > 0) {
-      const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType })
+      const blob = new Blob(recordedChunks, { type: recordedMimeType })
       recordedUrl.value = URL.createObjectURL(blob)
     }
+    recording.value = false
   }
   mediaRecorder.start(100)
   recording.value = true
@@ -96,10 +99,12 @@ function startRecording() {
 
 function stopRecording() {
   if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    mediaRecorder.stop()
+    const recorder = mediaRecorder
+    mediaRecorder = null
+    recorder.stop()
+  } else {
+    mediaRecorder = null
   }
-  mediaRecorder = null
-  recording.value = false
 }
 
 function startMonitoring() {
