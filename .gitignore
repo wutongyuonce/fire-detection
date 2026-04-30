@@ -10,5 +10,5 @@ wheels/
 .venv
 
 # Storage files
-storage/snapshots/fire/*
-storage/uploads/videos/*
+backend/storage/snapshots/fire/*
+backend/storage/uploads/videos/*
