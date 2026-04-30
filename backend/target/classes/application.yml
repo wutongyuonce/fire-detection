@@ -1,0 +1,30 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/fire_detection?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: root
+    password: 123456
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+
+app:
+  storage:
+    root: storage
+    video-dir: uploads/videos
+    snapshot-dir: snapshots/fire
+  inference:
+    base-url: http://localhost:8000
+    weights-path: ../best.pt
+    device: cpu
+    default-conf-threshold: 0.30
