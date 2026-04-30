@@ -8,3 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Storage files
+storage/snapshots/fire/*
+storage/uploads/videos/*
